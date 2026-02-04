@@ -259,25 +259,53 @@ csvInput.addEventListener("change", async e => {
   if (!file) return;
 
   const text = await file.text();
-  const rows = text.split("\n").slice(1);
+
+  const rows = text
+    .split("\n")
+    .map(r => r.trim())
+    .filter(Boolean);
+
+  // Remove header
+  rows.shift();
+
+  const newLinks = [];
 
   for (const row of rows) {
-    if (!row.trim()) continue;
-    const [title, path, redirectTo] = row.split(",");
+    const [title, path, redirectTo] = row
+      .split(",")
+      .map(v => v.trim());
+
+    if (!title || !path || !redirectTo) continue;
     if (!requireValidURL(redirectTo)) continue;
 
-    links.push({
+    // Prevent duplicates
+    if (links.some(l => l.path === path)) continue;
+
+    const link = {
       id: crypto.randomUUID(),
       title,
       path,
       redirectTo
-    });
+    };
 
-    await writeRedirect(path, redirectTo);
+    newLinks.push(link);
+  }
+
+  if (!newLinks.length) {
+    alert("No valid links found in CSV");
+    return;
+  }
+
+  // Write redirects sequentially (safe)
+  for (const l of newLinks) {
+    await writeRedirect(l.path, l.redirectTo);
+    links.push(l);
   }
 
   await saveJSON();
+  alert(`Imported ${newLinks.length} shortlinks`);
 });
+
 
 searchInput.addEventListener("input", render);
 </script>
