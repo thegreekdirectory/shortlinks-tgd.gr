@@ -2,52 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TGD Redirect Admin</title>
+  <title>TGD Shortlinks Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen p-6">
-  <div class="max-w-6xl mx-auto bg-white shadow rounded p-6">
+<div class="max-w-6xl mx-auto bg-white shadow rounded p-6">
 
-    <h1 class="text-2xl font-bold mb-4">Redirect Admin</h1>
+<h1 class="text-2xl font-bold mb-4">Shortlinks Admin</h1>
 
-    <!-- LOGIN -->
-    <div id="loginBox" class="mb-6">
-      <input id="tokenInput" type="password"
-        placeholder="GitHub Personal Access Token"
-        class="border p-2 w-full mb-2">
-      <button onclick="login()"
-        class="bg-blue-600 text-white px-4 py-2 rounded">
-        Login
-      </button>
-    </div>
+<!-- LOGIN -->
+<div id="loginBox" class="mb-6">
+  <input id="tokenInput" type="password"
+    placeholder="GitHub Personal Access Token"
+    class="border p-2 w-full mb-2">
+  <button onclick="login()"
+    class="bg-blue-600 text-white px-4 py-2 rounded">
+    Login
+  </button>
+</div>
 
-    <!-- CONTROLS -->
-    <div id="controls" class="hidden mb-4 flex gap-2">
-      <input id="searchInput" placeholder="Search..."
-        class="border p-2 flex-1">
-      <button onclick="openNew()"
-        class="bg-green-600 text-white px-4 py-2 rounded">
-        New Link
-      </button>
-      <button onclick="loadLinks()"
-        class="bg-gray-600 text-white px-4 py-2 rounded">
-        Refresh
-      </button>
-    </div>
+<!-- CONTROLS -->
+<div id="controls" class="hidden mb-4 flex gap-2">
+  <input id="searchInput" placeholder="Search..."
+    class="border p-2 flex-1">
+  <button onclick="openNew()" class="bg-green-600 text-white px-4 py-2 rounded">
+    New Link
+  </button>
+  <input type="file" id="csvInput" accept=".csv"
+    class="border p-2">
+  <button onclick="loadLinks()" class="bg-gray-600 text-white px-4 py-2 rounded">
+    Refresh
+  </button>
+</div>
 
-    <!-- LIST -->
-    <div id="list" class="space-y-2"></div>
-  </div>
+<div id="list" class="space-y-2"></div>
+
+</div>
 
 <script>
 /* ================= CONFIG ================= */
 
 const OWNER = "thegreekdirectory";
-const REPO = "links";
-const LINKS_JSON = "data/links.json";
-const TEMPLATE_PATH = "r/_template.html";
-const REDIRECT_DIR = "r";
+const REPO = "shortlinks-tgd.gr";
+const LINKS_JSON = "links.json";
+const TEMPLATE_PATH = "template.html";
 
 let token = "";
 let links = [];
@@ -71,14 +70,6 @@ function gh(path) {
   );
 }
 
-function requireValidPath(path) {
-  if (!path.startsWith("/r/")) {
-    alert("Path must start with /r/");
-    return false;
-  }
-  return true;
-}
-
 function requireValidURL(url) {
   if (!url.startsWith("https://")) {
     alert("Redirect URL must start with https://");
@@ -87,8 +78,8 @@ function requireValidURL(url) {
   return true;
 }
 
-function slugFromPath(path) {
-  return path.replace("/r/", "");
+function fileFromPath(path) {
+  return `${path.replace(/^\/+/, "")}.html`;
 }
 
 /* ================= LOAD ================= */
@@ -114,11 +105,11 @@ function render() {
     )
     .forEach(l => {
       list.innerHTML += `
-        <div class="border rounded p-3 flex justify-between items-center">
+        <div class="border rounded p-3 flex justify-between">
           <div>
             <div class="font-semibold">${l.title}</div>
             <div class="text-sm text-gray-600">
-              ${l.path} → ${l.redirectTo}
+              /${l.path} → ${l.redirectTo}
             </div>
           </div>
           <div class="space-x-3">
@@ -141,9 +132,7 @@ async function loadTemplate() {
 /* ================= FILE OPS ================= */
 
 async function writeRedirect(path, redirectTo) {
-  const slug = slugFromPath(path);
-  const filePath = `${REDIRECT_DIR}/${slug}.html`;
-
+  const filePath = fileFromPath(path);
   let html = await loadTemplate();
   html = html.replaceAll("{{REDIRECT_URL}}", redirectTo);
 
@@ -162,7 +151,7 @@ async function writeRedirect(path, redirectTo) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message: "Write redirect page",
+        message: "Write redirect",
         content,
         ...(sha && { sha })
       })
@@ -171,12 +160,9 @@ async function writeRedirect(path, redirectTo) {
 }
 
 async function removeRedirect(path) {
-  const slug = slugFromPath(path);
-  const filePath = `${REDIRECT_DIR}/${slug}.html`;
-
+  const filePath = fileFromPath(path);
   const res = await gh(filePath);
   if (!res.ok) return;
-
   const file = await res.json();
 
   await fetch(
@@ -188,7 +174,7 @@ async function removeRedirect(path) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message: "Delete redirect page",
+        message: "Delete redirect",
         sha: file.sha
       })
     }
@@ -224,11 +210,11 @@ async function saveJSON() {
 
 async function openNew() {
   const title = prompt("Title");
-  const path = prompt("Path (must start with /r/)");
+  const path = prompt("Path (no leading slash)");
   const redirectTo = prompt("Redirect URL (https://...)");
 
   if (!title || !path || !redirectTo) return;
-  if (!requireValidPath(path) || !requireValidURL(redirectTo)) return;
+  if (!requireValidURL(redirectTo)) return;
 
   const link = {
     id: crypto.randomUUID(),
@@ -250,12 +236,9 @@ async function editLink(id) {
   link.path = prompt("Path", link.path);
   link.redirectTo = prompt("Redirect URL", link.redirectTo);
 
-  if (!requireValidPath(link.path) || !requireValidURL(link.redirectTo)) return;
+  if (!requireValidURL(link.redirectTo)) return;
 
-  if (oldPath !== link.path) {
-    await removeRedirect(oldPath);
-  }
-
+  if (oldPath !== link.path) await removeRedirect(oldPath);
   await writeRedirect(link.path, link.redirectTo);
   await saveJSON();
 }
@@ -263,18 +246,40 @@ async function editLink(id) {
 async function deleteLink(id) {
   if (!confirm("Delete this redirect?")) return;
 
-  const index = links.findIndex(l => l.id === id);
-  const link = links[index];
-
-  await removeRedirect(link.path);
-  links.splice(index, 1);
+  const i = links.findIndex(l => l.id === id);
+  await removeRedirect(links[i].path);
+  links.splice(i, 1);
   await saveJSON();
 }
 
-/* ================= EVENTS ================= */
+/* ================= CSV UPLOAD ================= */
+
+csvInput.addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  const rows = text.split("\n").slice(1);
+
+  for (const row of rows) {
+    if (!row.trim()) continue;
+    const [title, path, redirectTo] = row.split(",");
+    if (!requireValidURL(redirectTo)) continue;
+
+    links.push({
+      id: crypto.randomUUID(),
+      title,
+      path,
+      redirectTo
+    });
+
+    await writeRedirect(path, redirectTo);
+  }
+
+  await saveJSON();
+});
 
 searchInput.addEventListener("input", render);
 </script>
-
 </body>
 </html>
