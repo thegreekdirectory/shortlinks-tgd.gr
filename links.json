@@ -85,12 +85,6 @@
       "redirectTo": "https://www.thegreekdirectory.org/listings?category=Retail+%26+Shopping"
     },
     {
-      "id": "652e979a-3b8a-42af-937c-84822d1cc1e9",
-      "title": "Portal #2",
-      "path": "/b/2",
-      "redirectTo": "https://listings.thegreekdirectory.org/business.html?slug=b"
-    },
-    {
       "id": "2fc7ae09-7bb7-4c66-b629-366b2315aaa6",
       "title": "Listing #3",
       "path": "/l/3",
